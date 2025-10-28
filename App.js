@@ -14,6 +14,7 @@ import LoginScreen from "./screens/LoginScreen";
 import AboutScreen from "./screens/AboutScreen";
 import ElectrolyteDetails from "./screens/ElectrolyteDetails";
 import CheckECGScreen from "./screens/CheckECGScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen"; // ✅ Added
 
 const Stack = createNativeStackNavigator();
 
@@ -55,6 +56,10 @@ export default function App() {
                 />
               )}
             </Stack.Screen>
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen} // ✅ Added Forgot Password screen
+            />
           </>
         ) : justLoggedIn ? (
           // 👇 User just logged in → Go to About first
