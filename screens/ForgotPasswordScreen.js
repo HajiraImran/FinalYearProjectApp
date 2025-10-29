@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   View,
@@ -13,6 +12,7 @@ import { auth } from "../firebase";
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handlePasswordReset = async () => {
     if (!email) {
@@ -20,15 +20,19 @@ export default function ForgotPasswordScreen({ navigation }) {
       return;
     }
 
+    setLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
       Alert.alert(
         "Success ✅",
         "Password reset link has been sent to your email."
       );
-      navigation.goBack();
+      // ✅ Redirect to success screen
+      navigation.replace("ResetSuccess");
     } catch (error) {
       Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,8 +52,14 @@ export default function ForgotPasswordScreen({ navigation }) {
         autoCapitalize="none"
       />
 
-      <TouchableOpacity style={styles.button} onPress={handlePasswordReset}>
-        <Text style={styles.buttonText}>Send Reset Link</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && { opacity: 0.7 }]}
+        onPress={handlePasswordReset}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Sending..." : "Send Reset Link"}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.goBack()}>

@@ -3,27 +3,30 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 
 // Screens
 import SplashScreen from "./screens/SplashScreen";
 import RegisterScreen from "./screens/RegisterScreen";
-import HomeScreen from "./screens/HomeScreen";
 import LoginScreen from "./screens/LoginScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
+import ResetSuccessScreen from "./screens/ResetSuccessScreen";
 import AboutScreen from "./screens/AboutScreen";
 import ElectrolyteDetails from "./screens/ElectrolyteDetails";
 import CheckECGScreen from "./screens/CheckECGScreen";
-import ForgotPasswordScreen from "./screens/ForgotPasswordScreen"; // ✅ Added
+import HomeScreen from "./screens/HomeScreen";
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
-  const [justLoggedIn, setJustLoggedIn] = useState(false); // track login event
 
-  // ✅ Listen for Firebase authentication state
+  // ✅ Listen for Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -35,53 +38,54 @@ export default function App() {
   if (initializing) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#B22222" />
       </View>
+    );
+  }
+
+  // ✅ Footer Tabs after login
+  function MainTabs() {
+    return (
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ color, size }) => {
+            let iconName;
+            if (route.name === "Home") iconName = "home";
+            else if (route.name === "About") iconName = "information-circle";
+            else if (route.name === "ECG") iconName = "pulse";
+            else if (route.name === "Electrolytes") iconName = "flask";
+
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: "#B22222",
+          tabBarInactiveTintColor: "gray",
+          headerShown: false,
+        })}
+      >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="ECG" component={CheckECGScreen} />
+        <Tab.Screen name="Electrolytes" component={ElectrolyteDetails} />
+        <Tab.Screen name="About" component={AboutScreen} />
+      </Tab.Navigator>
     );
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {/* 🔹 Auth Flow */}
         {!user ? (
-          // 👇 Show this flow when user is NOT logged in
           <>
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="Login">
-              {(props) => (
-                <LoginScreen
-                  {...props}
-                  onLoginSuccess={() => setJustLoggedIn(true)} // ✅ Pass callback
-                />
-              )}
-            </Stack.Screen>
-            <Stack.Screen
-              name="ForgotPassword"
-              component={ForgotPasswordScreen} // ✅ Added Forgot Password screen
-            />
-          </>
-        ) : justLoggedIn ? (
-          // 👇 User just logged in → Go to About first
-          <>
-            <Stack.Screen name="About" component={AboutScreen} />
-            <Stack.Screen
-              name="ElectrolyteDetails"
-              component={ElectrolyteDetails}
-            />
-            <Stack.Screen name="CheckECG" component={CheckECGScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetSuccess" component={ResetSuccessScreen} />
           </>
         ) : (
-          // 👇 Already logged in before → Go directly to Home
           <>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="About" component={AboutScreen} />
-            <Stack.Screen
-              name="ElectrolyteDetails"
-              component={ElectrolyteDetails}
-            />
-            <Stack.Screen name="CheckECG" component={CheckECGScreen} />
+            {/* 🔹 App Flow */}
+            <Stack.Screen name="MainTabs" component={MainTabs} />
           </>
         )}
       </Stack.Navigator>

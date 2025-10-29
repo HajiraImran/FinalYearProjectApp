@@ -1,13 +1,35 @@
-import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from "react-native";
+import React, { useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  BackHandler,
+} from "react-native";
 
 export default function AboutScreen({ navigation }) {
+  useEffect(() => {
+    // ✅ Handle back button to go to Home instead
+    const backAction = () => {
+      navigation.navigate("Home");
+      return true; // Prevent default back behavior
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove(); // cleanup
+  }, [navigation]);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      
       {/* ECG Image */}
       <Image
-        source={require("../assets/ECGS.png")} // Replace later
+        source={require("../assets/ECGS.png")}
         style={styles.image}
         resizeMode="contain"
       />
@@ -18,10 +40,14 @@ export default function AboutScreen({ navigation }) {
       {/* Subheading */}
       <Text style={styles.subHeading}>Detect Imbalances</Text>
 
-      {/* Description (Left aligned) */}
+      {/* Description */}
       <Text style={styles.description}>
-        Trilyte is a non-invasive, real-time monitoring system that uses ECG signals to detect potassium, calcium, and magnesium imbalances.Trilyte aims to assist clinicians and patients by offering accurate, real-time insights into electrolyte levels without the need for invasive blood tests.
-Its portable and user-friendly design makes it suitable for use in hospitals, clinics, and home healthcare settings.
+        Trilyte is a non-invasive, real-time monitoring system that uses ECG
+        signals to detect potassium, calcium, and magnesium imbalances. Trilyte
+        aims to assist clinicians and patients by offering accurate, real-time
+        insights into electrolyte levels without the need for invasive blood
+        tests. Its portable and user-friendly design makes it suitable for use
+        in hospitals, clinics, and home healthcare settings.
       </Text>
 
       {/* Button */}
@@ -31,7 +57,6 @@ Its portable and user-friendly design makes it suitable for use in hospitals, cl
       >
         <Text style={styles.buttonText}>Get Details</Text>
       </TouchableOpacity>
-
     </ScrollView>
   );
 }
@@ -62,14 +87,13 @@ const styles = StyleSheet.create({
     color: "#555",
   },
   description: {
-  fontSize: 18,
-  textAlign: "justify", // 👈 This is the key
-  width: "100%",
-  marginTop: 20,
-  lineHeight: 26,
-  color: "#333",
-},
-
+    fontSize: 18,
+    textAlign: "justify",
+    width: "100%",
+    marginTop: 20,
+    lineHeight: 26,
+    color: "#333",
+  },
   button: {
     backgroundColor: "#B22222",
     padding: 14,

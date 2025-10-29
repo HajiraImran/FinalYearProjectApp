@@ -24,6 +24,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "15ad725f-9077-4a01-b6c5-9c8542a98a87"
+      }
+    },
+    "owner": "hajiraimran"
   }
 }
