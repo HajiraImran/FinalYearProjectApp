@@ -15,7 +15,7 @@ import {
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
-export default function LoginScreen({ navigation, onLoginSuccess }) {
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,8 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      if (onLoginSuccess) onLoginSuccess();
+      Alert.alert("Success", "Logged in successfully!");
+      // ✅ Navigation after login can be handled by Firebase auth listener if needed
     } catch (err) {
       Alert.alert("Login Error", err.message);
     } finally {
@@ -43,17 +44,14 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* 🔹 Top Image */}
         <Image
           source={require("../assets/ECGS.png")}
           style={styles.topImage}
           resizeMode="contain"
         />
 
-        {/* 🔹 Title */}
         <Text style={styles.title}>Login</Text>
 
-        {/* 🔹 Inputs */}
         <View style={styles.inputContainer}>
           <TextInput
             placeholder="Email"
@@ -72,15 +70,6 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
           />
         </View>
 
-        {/* 🔹 Forgot Password */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ForgotPassword")}
-          style={styles.forgotPasswordContainer}
-        >
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-        </TouchableOpacity>
-
-        {/* 🔹 Login Button */}
         {loading ? (
           <ActivityIndicator size="large" color="#B22222" />
         ) : (
@@ -89,12 +78,20 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
           </TouchableOpacity>
         )}
 
-        {/* 🔹 Register Link */}
+        {/* Forgot Password Link */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ForgotPassword")}
+          style={{ marginTop: 12 }}
+        >
+          <Text style={styles.forgotText}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        {/* Sign Up Link */}
         <TouchableOpacity
           onPress={() => navigation.navigate("Register")}
           style={{ marginTop: 12 }}
         >
-          <Text style={{ color: "#555" }}>
+          <Text style={styles.signUpText}>
             Don't have an account?{" "}
             <Text style={{ color: "#B22222", fontWeight: "600" }}>Sign Up</Text>
           </Text>
@@ -105,31 +102,15 @@ export default function LoginScreen({ navigation, onLoginSuccess }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   scrollContainer: {
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
   },
-  topImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 20,
-    marginTop: 80,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    marginBottom: 20,
-    color: "#B22222",
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 10,
-  },
+  topImage: { width: 200, height: 200, marginBottom: 20, marginTop: 80 },
+  title: { fontSize: 32, fontWeight: "700", marginBottom: 20, color: "#B22222" },
+  inputContainer: { width: "100%", marginBottom: 20 },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -139,15 +120,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#f9f9f9",
   },
-  forgotPasswordContainer: {
-    width: "100%",
-    alignItems: "flex-end",
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    color: "#B22222",
-    fontWeight: "500",
-  },
   button: {
     backgroundColor: "#B22222",
     padding: 14,
@@ -156,9 +128,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 10,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
+  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  forgotText: { color: "#B22222", fontWeight: "600", fontSize: 16 },
+  signUpText: { color: "#555", fontSize: 16 },
 });

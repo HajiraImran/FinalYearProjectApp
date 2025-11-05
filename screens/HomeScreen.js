@@ -1,164 +1,218 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from "react-native";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Alert,
+} from "react-native";
+import { signOut, onAuthStateChanged } from "firebase/auth";
+import { ref, onValue, off, get } from "firebase/database";
+import { auth, db } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
+import { MotiView } from "moti";
+import { LinearGradient } from "expo-linear-gradient";
+import { LineChart } from "react-native-chart-kit";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 60) / 2; // Two cards per row with padding
 
-export default function HomeScreen({ navigation }) {
-  const user = auth.currentUser;
+export default function HomeScreen() {
+  const [user, setUser] = useState(null);
+  const [latestECG, setLatestECG] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) fetchLatestECG(u.uid);
+    });
+    return unsubscribe;
+  }, []);
+
+  const fetchLatestECG = (uid) => {
+    const ecgRef = ref(db, `users/${uid}/ecg_data`);
+    onValue(ecgRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const entries = Object.values(data).sort(
+          (a, b) => b.timestamp - a.timestamp
+        );
+        setLatestECG(entries[0]);
+      } else setLatestECG(null);
+    });
+    return () => off(ecgRef);
+  };
+
+  const getESP32IP = async () => {
+    try {
+      const snapshot = await get(ref(db, "esp32_status/ip"));
+      if (snapshot.exists()) return snapshot.val();
+      Alert.alert("Error", "ESP32 IP not found in Firebase.");
+      return null;
+    } catch (err) {
+      console.log(err);
+      Alert.alert("Error", "Failed to fetch ESP32 IP.");
+      return null;
+    }
+  };
+
+  const handleRecordECG = async () => {
+    if (!user) return;
+    try {
+      const ESP32_IP = await getESP32IP();
+      if (!ESP32_IP) return;
+
+      const response = await fetch(`http://${ESP32_IP}/capture?uid=${user.uid}`);
+      if (response.ok) {
+        Alert.alert("Success", "ECG capture triggered.");
+      } else {
+        Alert.alert("Error", "Failed to trigger ECG capture.");
+      }
+    } catch (err) {
+      console.log(err);
+      Alert.alert("Error", "Could not connect to ESP32.");
+    }
+  };
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // No manual navigation needed; App.js handles auth state
+      Alert.alert("Logged Out", "You have been signed out successfully.");
     } catch (err) {
-      console.log("Logout Error:", err.message);
+      console.log(err.message);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingVertical: 20 }}>
-      {/* Greeting with Separator */}
-      <View style={styles.greetingContainer}>
-        <Text style={styles.greeting}>Hello,</Text>
-        <Text style={styles.greetingName}>{user?.displayName || "User"}</Text>
-        <View style={styles.separator} />
-      </View>
-
-      {/* Action Cards */}
-      <View style={styles.cardGrid}>
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("ECG")}
-        >
-          <Ionicons name="pulse" size={40} color="#B22222" />
-          <Text style={styles.cardText}>Check ECG</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("Electrolytes")}
-        >
-          <Ionicons name="flask" size={40} color="#B22222" />
-          <Text style={styles.cardText}>Electrolytes</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("About")}
-        >
-          <Ionicons name="information-circle" size={40} color="#B22222" />
-          <Text style={styles.cardText}>About App</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Graph / Stats Card */}
-      <View style={styles.graphCard}>
-        <Text style={styles.graphTitle}>ECG Trends</Text>
-        <View style={styles.graphPlaceholder}>
-          <Text style={{ color: "#aaa" }}>Graph / Stats Placeholder</Text>
+    <LinearGradient colors={["#fff", "#f8f8f8"]} style={{ flex: 1 }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingVertical: 20 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Welcome Back,</Text>
+            <Text style={styles.greetingName}>{user?.displayName || "User"}</Text>
+          </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutIcon}>
+            <Ionicons name="log-out-outline" size={26} color="#B22222" />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* ECG Summary */}
+        <MotiView
+          from={{ opacity: 0, translateY: 20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 600 }}
+          style={styles.summaryCard}
+        >
+          {latestECG?.values?.length ? (
+            <>
+              <Text style={styles.summaryTitle}>Recent ECG Overview</Text>
+              <Text style={styles.summaryText}>
+                📅 {new Date(latestECG.timestamp).toLocaleString()}
+              </Text>
+              <Text style={styles.summaryText}>
+                💓 Samples: {latestECG.values.length}
+              </Text>
+              <LineChart
+                data={{ labels: [], datasets: [{ data: latestECG.values }] }}
+                width={width - 60}
+                height={120}
+                chartConfig={{
+                  backgroundColor: "#fff",
+                  backgroundGradientFrom: "#fff",
+                  backgroundGradientTo: "#fff",
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(178,34,34,${opacity})`,
+                  propsForDots: { r: "0" },
+                }}
+                bezier
+                withDots={false}
+                withInnerLines={false}
+                withOuterLines={false}
+                style={{ borderRadius: 12, marginTop: 10 }}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={styles.summaryTitle}>No ECG Data Yet</Text>
+              <Text style={styles.summaryText}>
+                Record your first ECG to see the summary here.
+              </Text>
+            </>
+          )}
+        </MotiView>
+
+        {/* Action Buttons */}
+        <View style={styles.actions}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleRecordECG}>
+            <Ionicons name="pulse-outline" size={22} color="#fff" />
+            <Text style={styles.actionText}>Record ECG</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: "#555" }]}
+          >
+            <Ionicons name="time-outline" size={22} color="#fff" />
+            <Text style={styles.actionText}>History</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f2f2f2",
-    paddingHorizontal: 20,
-  },
-  greetingContainer: {
-    marginBottom: 20,
-    marginTop: 40,
-  },
-  greeting: {
-    fontSize: 18,
-    color: "#555",
-  },
-  greetingName: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#B22222",
-    marginTop: 4,
-  },
-  separator: {
-    height: 2,
-    backgroundColor: "#ccc",
-    width: "100%",
-    marginVertical: 15,
-  },
-  cardGrid: {
+  container: { flex: 1, paddingHorizontal: 20 },
+  header: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 25,
-  },
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 25,
     alignItems: "center",
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 4,
+    marginTop: 50,
   },
-  cardText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#B22222",
-    textAlign: "center",
-  },
-  graphCard: {
-    width: "100%",
+  greeting: { fontSize: 16, color: "#777" },
+  greetingName: { fontSize: 24, fontWeight: "700", color: "#B22222" },
+  logoutIcon: {
     backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 25,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 4,
+    borderRadius: 50,
+    padding: 8,
+    elevation: 3,
   },
-  graphTitle: {
+  summaryCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    elevation: 4,
+    shadowColor: "#B22222",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    marginTop: 25,
+  },
+  summaryTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#B22222",
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  graphPlaceholder: {
-    height: 150,
-    borderRadius: 15,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
+  summaryText: { fontSize: 15, color: "#333" },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 35,
+    paddingHorizontal: 10,
   },
-  logoutButton: {
+  actionBtn: {
     backgroundColor: "#B22222",
-    paddingVertical: 14,
-    paddingHorizontal: 80,
-    borderRadius: 50,
-    marginBottom: 30,
-    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    elevation: 3,
   },
-  logoutText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  actionText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
 });

@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ElectrolyteDetails({ navigation }) {
   const electrolytes = [
@@ -27,43 +28,70 @@ export default function ElectrolyteDetails({ navigation }) {
   ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Electrolyte Details</Text>
+    <View style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* 🔙 Custom Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={26} color="#B22222" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Electrolyte Details</Text>
+      </View>
 
-      {electrolytes.map((item, index) => (
-        <View key={index} style={[styles.card, { backgroundColor: item.color }]}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          <Text style={styles.cardText}>{item.info}</Text>
-        </View>
-      ))}
-
-      {/* ✅ Get Started Button */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate("CheckECG")}
- // Change this target as needed
+      {/* 🔹 Scroll Content */}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.buttonText}>Get Started</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {electrolytes.map((item, index) => (
+          <View key={index} style={[styles.card, { backgroundColor: item.color }]}>
+            <Text style={styles.cardTitle}>{item.name}</Text>
+            <Text style={styles.cardText}>{item.info}</Text>
+          </View>
+        ))}
+
+        {/* ✅ Get Started Button */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("CheckECG")}
+        >
+          <Text style={styles.buttonText}>Get Started</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 55,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  backButton: {
+    padding: 6,
+    marginRight: 10,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#B22222",
+  },
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: "#fff",
     alignItems: "center",
-    paddingTop: 80,
-    paddingBottom: 60, // give space below the button
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 40,
-    color: "#B22222",
+    paddingBottom: 80,
   },
   card: {
     width: "100%",
@@ -88,7 +116,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   button: {
-    backgroundColor: "#B22222", // Deep red accent
+    backgroundColor: "#B22222",
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 40,

@@ -33,12 +33,12 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
+      await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(auth.currentUser, { displayName: username.trim() });
+
+      Alert.alert("Success", "Account created successfully!");
+      // ✅ Navigate to MainTabs (Home is first tab)
+      navigation.replace("MainTabs");
     } catch (err) {
       Alert.alert("Registration Error", err.message);
     } finally {
@@ -52,9 +52,8 @@ export default function RegisterScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* ✅ Image at the Top */}
         <Image
-          source={require("../assets/ECGS.png")} // Replace later
+          source={require("../assets/ECGS.png")}
           style={styles.topImage}
           resizeMode="contain"
         />
@@ -64,7 +63,7 @@ export default function RegisterScreen({ navigation }) {
         <View style={styles.inputContainer}>
           <TextInput
             placeholder="Username"
-            value= {username}
+            value={username}
             onChangeText={setUsername}
             style={styles.input}
           />
@@ -86,7 +85,7 @@ export default function RegisterScreen({ navigation }) {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color="#B22222" />
         ) : (
           <TouchableOpacity style={styles.button} onPress={handleRegister}>
             <Text style={styles.buttonText}>Sign Up</Text>
@@ -98,7 +97,8 @@ export default function RegisterScreen({ navigation }) {
           style={{ marginTop: 12 }}
         >
           <Text style={{ color: "#555" }}>
-            Already have an account? Login
+            Already have an account?{" "}
+            <Text style={{ color: "#B22222", fontWeight: "600" }}>Login</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -107,31 +107,11 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  topImage: {
-    width: 200,
-    height: 200,
-    marginBottom: 20,
-    marginTop: 80,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "700",
-    marginBottom: 20,
-    color: "#B22222",
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  scrollContainer: { alignItems: "center", justifyContent: "center", padding: 20 },
+  topImage: { width: 200, height: 200, marginBottom: 20, marginTop: 80 },
+  title: { fontSize: 32, fontWeight: "700", marginBottom: 20, color: "#B22222" },
+  inputContainer: { width: "100%", marginBottom: 20 },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -141,17 +121,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: "#f9f9f9",
   },
-  button: {
-    backgroundColor: "#B22222",
-    padding: 14,
-    borderRadius: 40,
-    alignItems: "center",
-    width: "100%",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
+  button: { backgroundColor: "#B22222", padding: 14, borderRadius: 40, alignItems: "center", width: "100%", marginTop: 10 },
+  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
 });
