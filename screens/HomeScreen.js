@@ -154,12 +154,7 @@ export default function HomeScreen() {
             <Text style={styles.actionText}>Record ECG</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: "#555" }]}
-          >
-            <Ionicons name="time-outline" size={22} color="#fff" />
-            <Text style={styles.actionText}>History</Text>
-          </TouchableOpacity>
+
         </View>
       </ScrollView>
     </LinearGradient>
