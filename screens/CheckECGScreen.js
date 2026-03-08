@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MotiView, MotiText } from "moti";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient"; // Gradient Import
 
 export default function CheckECGScreen({ navigation }) {
   return (
@@ -90,7 +91,7 @@ export default function CheckECGScreen({ navigation }) {
           ⚠️ Stay still while recording
         </MotiText>
 
-        {/* ✅ Button moved inside ScrollView for natural placement */}
+        {/* ✅ Updated Button with Maroon Gradient */}
         <MotiView
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
@@ -98,11 +99,18 @@ export default function CheckECGScreen({ navigation }) {
           style={{ width: "100%", marginTop: 30, marginBottom: 40 }}
         >
           <TouchableOpacity
-            style={styles.button}
             onPress={() => navigation.navigate("ElectrolytesScreen")}
             activeOpacity={0.85}
+            style={styles.buttonWrapper}
           >
-            <Text style={styles.buttonText}>Check Electrolyte</Text>
+            <LinearGradient
+              colors={["#B22222", "#800000", "#4D0000"]} // Maroon Gradient
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.buttonGradient}
+            >
+              <Text style={styles.buttonText}>Check Electrolyte</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </MotiView>
       </ScrollView>
@@ -115,8 +123,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -139,12 +145,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#B22222",
   },
-
-  // ScrollView Content
   scrollContent: {
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 40, // ✅ reduced padding
+    paddingBottom: 40,
   },
   topSection: {
     flexDirection: "row",
@@ -198,23 +202,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
   },
-
-  // ✅ Button styling
-  button: {
-    backgroundColor: "#B22222",
-    paddingVertical: 14,
+  // Button Styles
+  buttonWrapper: {
     borderRadius: 40,
-    alignItems: "center",
-    width: "100%",
-    elevation: 4,
+    overflow: "hidden",
+    elevation: 5,
     shadowColor: "#000",
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 5,
+  },
+  buttonGradient: {
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 17,
+    fontWeight: "700",
+    fontSize: 18,
     letterSpacing: 0.5,
   },
 });

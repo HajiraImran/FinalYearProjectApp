@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function AboutScreen({ navigation }) {
   return (
@@ -52,7 +53,7 @@ export default function AboutScreen({ navigation }) {
         </Text>
       </ScrollView>
 
-      {/* 🔹 Fixed Bottom Button */}
+      {/* 🔹 Fixed Bottom Button with Maroon Gradient */}
       <MotiView
         from={{ opacity: 0, translateY: 40 }}
         animate={{ opacity: 1, translateY: 0 }}
@@ -60,11 +61,19 @@ export default function AboutScreen({ navigation }) {
         style={styles.fixedButtonContainer}
       >
         <TouchableOpacity
-          style={styles.button}
           onPress={() => navigation.navigate("ElectrolyteDetails")}
           activeOpacity={0.85}
+          style={styles.buttonWrapper}
         >
-          <Text style={styles.buttonText}>Get Details</Text>
+          <LinearGradient
+            // Maroon Gradient Colors: Light Maroon to Deep Maroon
+            colors={["#B22222", "#800000", "#4D0000"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.buttonGradient}
+          >
+            <Text style={styles.buttonText}>Get Details</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </MotiView>
     </View>
@@ -76,7 +85,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -98,11 +106,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#B22222",
   },
-
   scrollContent: {
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingBottom: 100, // space for button
+    paddingBottom: 100, 
   },
   image: {
     width: 220,
@@ -124,28 +131,29 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     color: "#333",
   },
-
-  // 🔹 Fixed Bottom Button
   fixedButtonContainer: {
     position: "absolute",
     bottom: 25,
     alignSelf: "center",
     width: "90%",
   },
-  button: {
-    backgroundColor: "#B22222",
-    paddingVertical: 14,
+  buttonWrapper: {
     borderRadius: 40,
-    alignItems: "center",
-    elevation: 4,
+    overflow: "hidden", 
+    elevation: 5,
     shadowColor: "#000",
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 5,
+  },
+  buttonGradient: {
+    paddingVertical: 15,
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
-    fontSize: 17,
-    letterSpacing: 0.5,
+    fontWeight: "700",
+    fontSize: 18,
+    letterSpacing: 0.8,
   },
 });
