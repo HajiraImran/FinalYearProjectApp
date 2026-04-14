@@ -23,6 +23,7 @@ import HomeScreen from "./screens/HomeScreen";
 import ECGScreen from "./screens/ECGScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ElectrolytesScreen from "./screens/ElectrolytesScreen"; // ✅ add this line
+import HistoryScreen from "./screens/HistoryScreen";
 
 
 
@@ -105,6 +106,7 @@ export default function App() {
             <Stack.Screen name="ElectrolytesScreen" component={ElectrolytesScreen} />
             <Stack.Screen name="CheckECG" component={CheckECGScreen} />
             <Stack.Screen name="ECGScreen" component={ECGScreen} />
+            <Stack.Screen name="History" component={HistoryScreen} />
           </>
         )}
       </Stack.Navigator>
