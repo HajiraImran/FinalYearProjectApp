@@ -8,9 +8,9 @@ import {
   Dimensions,
   Alert,
   StatusBar,
-  SafeAreaView,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { ref, onValue, off, get } from "firebase/database";
 import { auth, db } from "../firebase";
@@ -108,6 +108,21 @@ export default function HomeScreen({ navigation }) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          onPress: () => signOut(auth), 
+          style: "destructive" 
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" />
@@ -116,8 +131,8 @@ export default function HomeScreen({ navigation }) {
       {/* Header Bar */}
       <View style={styles.topHeader}>
         <Text style={styles.brandText}>Tri<Text style={styles.brandBold}>lyte</Text></Text>
-        <TouchableOpacity onPress={() => signOut(auth)}>
-          <Ionicons name="person-circle" size={38} color="#B22222" />
+        <TouchableOpacity onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={32} color="#B22222" />
         </TouchableOpacity>
       </View>
       
@@ -152,14 +167,20 @@ export default function HomeScreen({ navigation }) {
                 style={styles.chart}
               />
               <View style={styles.statsRow}>
-                <StatItem label="Timestamp" value={formatTimestamp(latestECG?.timestamp)} />
-                <StatItem label="Samples" value={latestECG?.values?.length || 0} />
-                <StatItem 
-                   label="Status" 
-                   value={latestResults?.Overall_Status ? String(latestResults.Overall_Status) : "Analyzing..."} 
-                   color={latestResults?.Overall_Status === "Normal" ? "#4CAF50" : "#B22222"} 
-                />
-              </View>
+  <StatItem 
+    label="BPM" 
+    value={latestResults?.BPM ? Math.round(latestResults.BPM) : "--"} 
+    color="#B22222" 
+  />
+  <StatItem 
+    label="Timestamp" 
+    value={formatTimestamp(latestECG?.timestamp)} 
+  />
+  <StatItem 
+    label="Samples" 
+    value={latestECG?.values ? latestECG.values.length : 0} 
+  />
+</View>
             </View>
           ) : (
             <View style={styles.emptyState}>
