@@ -39,10 +39,30 @@ export default function HistoryScreen({ navigation }) {
     return () => unsubscribe();
   }, []);
 
+  // --- Range Logic: Low aur High dono Red honge ---
+  const getStatusStyle = (type, value) => {
+    const val = parseFloat(value);
+    if (isNaN(val)) return styles.defaultText;
+
+    const ranges = {
+      Potassium: { min: 3.5, max: 5.0 },
+      Calcium: { min: 8.5, max: 10.5 },
+      Magnesium: { min: 1.7, max: 2.2 }
+    };
+
+    const range = ranges[type];
+
+    // Agar value min se kam ho YA max se zyada ho -> Red
+    if (val < range.min || val > range.max) {
+      return styles.redText; 
+    } else {
+      return styles.greenText; // Normal range mein -> Green
+    }
+  };
+
   const renderItem = ({ item }) => {
-    // 🔥 TIME FIX: Null check and Offset correction
     let ts = item?.timestamp;
-    if (!ts) return null; // Agar timestamp nahi hai to item render na karein
+    if (!ts) return null;
 
     if (ts < 1000000000) { 
         ts += 946684800; 
@@ -52,25 +72,28 @@ export default function HistoryScreen({ navigation }) {
     const dateStr = dateObj.toLocaleDateString('en-GB'); 
     const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // 🔥 String conversion to prevent "Text strings" error
     const getVal = (res) => {
       if (!res || !res.Value) return "--";
       return String(res.Value).split(' ')[0];
     };
+
+    const kVal = getVal(item.results?.Potassium);
+    const caVal = getVal(item.results?.Calcium);
+    const mgVal = getVal(item.results?.Magnesium);
 
     return (
       <View style={styles.tableRow}>
         <Text style={[styles.cell, styles.dateCell]}>{String(dateStr)}</Text>
         <Text style={[styles.cell, styles.timeCell]}>{String(timeStr)}</Text>
         
-        <Text style={[styles.cell, styles.valueCell, styles.redText]}>
-            {getVal(item.results?.Potassium)}
+        <Text style={[styles.cell, styles.valueCell, getStatusStyle('Potassium', kVal)]}>
+            {kVal}
         </Text>
-        <Text style={[styles.cell, styles.valueCell, styles.redText]}>
-            {getVal(item.results?.Calcium)}
+        <Text style={[styles.cell, styles.valueCell, getStatusStyle('Calcium', caVal)]}>
+            {caVal}
         </Text>
-        <Text style={[styles.cell, styles.valueCell, styles.greenText]}>
-            {getVal(item.results?.Magnesium)}
+        <Text style={[styles.cell, styles.valueCell, getStatusStyle('Magnesium', mgVal)]}>
+            {mgVal}
         </Text>
       </View>
     );
@@ -112,7 +135,7 @@ export default function HistoryScreen({ navigation }) {
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={{ marginTop: 50 }}>
-               <Text style={styles.emptyText}>No records found.</Text>
+                <Text style={styles.emptyText}>No records found.</Text>
             </View>
           }
         />
@@ -170,10 +193,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     fontWeight: '600',
-    color: '#444'
   },
-  redText: { color: '#d32f2f', fontWeight: '700' },
-  greenText: { color: '#556b2f', fontWeight: '700' },
+  defaultText: { color: '#444' },
+  redText: { color: '#D32F2F', fontWeight: '800' }, // Abnormal (Low/High)
+  greenText: { color: '#2E7D32', fontWeight: '800' }, // Normal
   dateCell: { flex: 2.5 },
   timeCell: { flex: 2 },
   valueCell: { flex: 1.5 },
