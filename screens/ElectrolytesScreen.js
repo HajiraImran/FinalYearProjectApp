@@ -43,42 +43,58 @@ export default function ElectrolytesScreen({ navigation }) {
   };
 
   const renderRecommendation = (type, level) => {
-  if (!level) return null;
-  const status = level.toUpperCase();
+    if (!level) return null;
+    const status = level.toUpperCase();
 
-  // --- Case 1: Agar Level LOW hai ---
-  if (status.includes("LOW")) {
-    let seeds = type === "Potassium" ? "Pumpkin & Sunflower Seeds" : 
-                type === "Calcium" ? "Chia & Sesame Seeds (Til)" : "Flax (Alsi) & Hemp Seeds";
+    // --- Case 1: Agar Level LOW hai (Action + Recovery Food) ---
+    if (status.includes("LOW")) {
+      let seeds = type === "Potassium" ? "Pumpkin & Sunflower seeds" : 
+                  type === "Calcium" ? "Chia & Sesame (Til) seeds" : "Flax (Alsi) & Hemp seeds";
+      
+      let advice = type === "Potassium" ? "Bananas, Apricots, and Spinach." : 
+                   type === "Calcium" ? "Milk, Yogurt, and Fortified cereals." : 
+                   "Whole grains and Leafy greens.";
 
-    return (
-      <View style={[styles.recBox, { backgroundColor: 'rgba(255, 255, 255, 0.7)' }]}>
-        <Ionicons name="leaf" size={16} color="#2E7D32" />
-        <Text style={styles.recText}>
-          <Text style={{ fontWeight: "bold" }}>Tip:</Text> Eat {seeds} to improve levels.
-        </Text>
-      </View>
-    );
-  }
+      return (
+        <View style={[styles.recBox, { backgroundColor: '#E3F2FD', borderColor: '#2196F3', borderWidth: 1 }]}>
+          <Ionicons name="medical" size={16} color="#0D47A1" />
+          <Text style={[styles.recText, { color: "#0D47A1" }]}>
+            <Text style={{ fontWeight: "bold" }}>Action (Low):</Text> Increase intake of {advice} Also, include <Text style={{ fontWeight: "bold" }}>{seeds}</Text> in your daily diet to restore levels naturally.
+          </Text>
+        </View>
+      );
+    }
 
-  // --- Case 2: Agar Level HIGH hai ---
-  if (status.includes("HIGH")) {
-    let avoid = type === "Potassium" ? "Bananas, Oranges & Potatoes" : 
-                type === "Calcium" ? "Dairy products & Supplements" : "Dark Chocolate & Nuts";
+    // --- Case 2: Agar Level HIGH hai (Restriction + Warning) ---
+    if (status.includes("HIGH")) {
+      let avoid = type === "Potassium" ? "Bananas, Potatoes and high-potassium Seeds." : 
+                  type === "Calcium" ? "Dairy products and Calcium supplements." : 
+                  "Nuts, Seeds, and Dark Chocolate.";
 
-    return (
-      <View style={[styles.recBox, { backgroundColor: 'rgba(255, 235, 238, 0.8)', borderColor: '#FFCDD2', borderWidth: 1 }]}>
-        <Ionicons name="warning" size={16} color="#D32F2F" />
-        <Text style={[styles.recText, { color: "#C62828" }]}>
-          <Text style={{ fontWeight: "bold" }}>Caution:</Text> Limit {avoid} and drink plenty of water.
-        </Text>
-      </View>
-    );
-  }
+      return (
+        <View style={[styles.recBox, { backgroundColor: '#FFF3E0', borderColor: '#FF9800', borderWidth: 1 }]}>
+          <Ionicons name="alert-circle" size={16} color="#E65100" />
+          <Text style={[styles.recText, { color: "#E65100" }]}>
+            <Text style={{ fontWeight: "bold" }}>Action (High):</Text> {avoid} <Text style={{ fontWeight: "bold" }}>Restrict seed consumption</Text> temporarily as they are dense in electrolytes. Increase water intake.
+          </Text>
+        </View>
+      );
+    }
 
-  return null;
-};
+    // --- Case 3: Agar Normal hai ---
+    if (status.includes("NORMAL")) {
+      return (
+        <View style={[styles.recBox, { backgroundColor: '#E8F5E9', borderColor: '#4CAF50', borderWidth: 1 }]}>
+          <Ionicons name="checkmark-circle" size={16} color="#1B5E20" />
+          <Text style={[styles.recText, { color: "#1B5E20" }]}>
+            <Text style={{ fontWeight: "bold" }}>Maintenance:</Text> Continue a balanced diet including a variety of seeds to maintain these healthy levels.
+          </Text>
+        </View>
+      );
+    }
 
+    return null;
+  };
   return (
     <View style={styles.container}>
       <View style={styles.header}>
