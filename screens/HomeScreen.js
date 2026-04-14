@@ -108,6 +108,21 @@ export default function HomeScreen({ navigation }) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          onPress: () => signOut(auth), 
+          style: "destructive" 
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" />
@@ -116,8 +131,8 @@ export default function HomeScreen({ navigation }) {
       {/* Header Bar */}
       <View style={styles.topHeader}>
         <Text style={styles.brandText}>Tri<Text style={styles.brandBold}>lyte</Text></Text>
-        <TouchableOpacity onPress={() => signOut(auth)}>
-          <Ionicons name="person-circle" size={38} color="#B22222" />
+        <TouchableOpacity onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={32} color="#B22222" />
         </TouchableOpacity>
       </View>
       
