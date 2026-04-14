@@ -43,17 +43,41 @@ export default function ElectrolytesScreen({ navigation }) {
   };
 
   const renderRecommendation = (type, level) => {
-    if (!level || !level.toUpperCase().includes("LOW")) return null;
+  if (!level) return null;
+  const status = level.toUpperCase();
+
+  // --- Case 1: Agar Level LOW hai ---
+  if (status.includes("LOW")) {
     let seeds = type === "Potassium" ? "Pumpkin & Sunflower Seeds" : 
                 type === "Calcium" ? "Chia & Sesame Seeds (Til)" : "Flax (Alsi) & Hemp Seeds";
 
     return (
-      <View style={styles.recBox}>
+      <View style={[styles.recBox, { backgroundColor: 'rgba(255, 255, 255, 0.7)' }]}>
         <Ionicons name="leaf" size={16} color="#2E7D32" />
-        <Text style={styles.recText}><Text style={{ fontWeight: "bold" }}>Tip:</Text> Eat {seeds} to improve levels.</Text>
+        <Text style={styles.recText}>
+          <Text style={{ fontWeight: "bold" }}>Tip:</Text> Eat {seeds} to improve levels.
+        </Text>
       </View>
     );
-  };
+  }
+
+  // --- Case 2: Agar Level HIGH hai ---
+  if (status.includes("HIGH")) {
+    let avoid = type === "Potassium" ? "Bananas, Oranges & Potatoes" : 
+                type === "Calcium" ? "Dairy products & Supplements" : "Dark Chocolate & Nuts";
+
+    return (
+      <View style={[styles.recBox, { backgroundColor: 'rgba(255, 235, 238, 0.8)', borderColor: '#FFCDD2', borderWidth: 1 }]}>
+        <Ionicons name="warning" size={16} color="#D32F2F" />
+        <Text style={[styles.recText, { color: "#C62828" }]}>
+          <Text style={{ fontWeight: "bold" }}>Caution:</Text> Limit {avoid} and drink plenty of water.
+        </Text>
+      </View>
+    );
+  }
+
+  return null;
+};
 
   return (
     <View style={styles.container}>
