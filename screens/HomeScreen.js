@@ -152,20 +152,14 @@ export default function HomeScreen({ navigation }) {
                 style={styles.chart}
               />
               <View style={styles.statsRow}>
-  <StatItem 
-    label="BPM" 
-    value={latestResults?.BPM ? Math.round(latestResults.BPM) : "--"} 
-    color="#B22222" 
-  />
-  <StatItem 
-    label="Timestamp" 
-    value={formatTimestamp(latestECG?.timestamp)} 
-  />
-  <StatItem 
-    label="Samples" 
-    value={latestECG?.values ? latestECG.values.length : 0} 
-  />
-</View>
+                <StatItem label="Timestamp" value={formatTimestamp(latestECG?.timestamp)} />
+                <StatItem label="Samples" value={latestECG?.values?.length || 0} />
+                <StatItem 
+                   label="Status" 
+                   value={latestResults?.Overall_Status ? String(latestResults.Overall_Status) : "Analyzing..."} 
+                   color={latestResults?.Overall_Status === "Normal" ? "#4CAF50" : "#B22222"} 
+                />
+              </View>
             </View>
           ) : (
             <View style={styles.emptyState}>
