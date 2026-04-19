@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
-
+import Toast from 'react-native-toast-message';
 
 
 // Screens
@@ -110,6 +110,8 @@ export default function App() {
           </>
         )}
       </Stack.Navigator>
+      <Toast />
     </NavigationContainer>
+    
   );
 }

@@ -8,43 +8,142 @@ import {
   ActivityIndicator,
   Platform,
   TouchableOpacity,
-  SafeAreaView
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LineChart } from "react-native-chart-kit";
 import { auth, db } from "../firebase";
 import { ref, onValue } from "firebase/database";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  FontAwesome5,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { MotiView } from "moti";
 
-const screenWidth = Dimensions.get("window").width;
+const { width: screenWidth } = Dimensions.get("window");
 
-/* ------------------- Enhanced Lab Card ------------------- */
-const LabCard = ({ title, Value, Level, Range, iconType, iconName }) => {
-  const isNormal = Level?.toUpperCase().includes("NORMAL");
+// ── THEME ──
+const C = {
+  bg: "#F6F7FA",
+  surface: "#FFFFFF",
+  crimson: "#B22222",
+  crimsonTint: "#FFF5F5",
+  textPrimary: "#111827",
+  textSecondary: "#4B5563",
+  textMuted: "#9CA3AF",
+  border: "#E5E7EB",
+  success: "#15803D",
+  successTint: "#F0FDF4",
+  successBorder: "#BBF7D0",
+  errorTint: "#FEF2F2",
+  errorBorder: "#FECACA",
+  error: "#B91C1C",
+};
+
+// ── RANGE BAR ── renders a visual fill indicator
+const RangeBar = ({ value, range, color }) => {
+  if (!value || !range) return null;
+  const match = range.match(/([\d.]+)\s*[-–]\s*([\d.]+)/);
+  if (!match) return null;
+  const lo = parseFloat(match[1]);
+  const hi = parseFloat(match[2]);
+  const v = parseFloat(value);
+  const pct = Math.min(Math.max(((v - lo) / (hi - lo)) * 100, 0), 100);
+  const inRange = v >= lo && v <= hi;
+  return (
+    <View style={bar.track}>
+      <View
+        style={[
+          bar.fill,
+          {
+            width: `${pct}%`,
+            backgroundColor: inRange ? C.success : C.error,
+          },
+        ]}
+      />
+      <View style={[bar.cursor, { left: `${pct}%` }]} />
+    </View>
+  );
+};
+
+const bar = StyleSheet.create({
+  track: {
+    height: 4,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 4,
+    marginTop: 10,
+    position: "relative",
+    overflow: "visible",
+  },
+  fill: { height: 4, borderRadius: 4 },
+  cursor: {
+    position: "absolute",
+    top: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: C.surface,
+    borderWidth: 2,
+    borderColor: C.textSecondary,
+    marginLeft: -6,
+  },
+});
+
+// ── LAB CARD ──
+const LabCard = ({ title, Value, Level, Range, iconType, iconName, delay = 0 }) => {
+  const isNormal =
+    Level?.toUpperCase().includes("NORMAL") ||
+    Level?.toUpperCase().includes("WITHIN");
+  const statusColor = isNormal ? C.success : C.error;
+  const statusTint = isNormal ? C.successTint : C.errorTint;
+  const statusBorder = isNormal ? C.successBorder : C.errorBorder;
 
   return (
-    <MotiView 
-      from={{ opacity: 0, y: 10 }} 
-      animate={{ opacity: 1, y: 0 }} 
+    <MotiView
+      from={{ opacity: 0, translateY: 14 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: "timing", duration: 420, delay }}
       style={styles.labCard}
     >
-      <View style={styles.labIconContainer}>
-        {iconType === "FontAwesome5" && <FontAwesome5 name={iconName} size={20} color="#B22222" />}
-        {iconType === "MaterialCommunityIcons" && <MaterialCommunityIcons name={iconName} size={24} color="#B22222" />}
-        {iconType === "Ionicons" && <Ionicons name={iconName} size={22} color="#B22222" />}
+      {/* Left: icon */}
+      <View style={styles.labIconWrap}>
+        {iconType === "FontAwesome5" && (
+          <FontAwesome5 name={iconName} size={18} color={C.crimson} />
+        )}
+        {iconType === "MaterialCommunityIcons" && (
+          <MaterialCommunityIcons name={iconName} size={20} color={C.crimson} />
+        )}
+        {iconType === "Ionicons" && (
+          <Ionicons name={iconName} size={20} color={C.crimson} />
+        )}
       </View>
-      
-      <View style={{ flex: 1, marginLeft: 15 }}>
+
+      {/* Middle: title + range bar */}
+      <View style={styles.labMid}>
         <Text style={styles.labTitle}>{title}</Text>
-        <Text style={styles.labRange}>Range: {Range || "--"}</Text>
+        <Text style={styles.labRange}>
+          Ref: {Range || "—"}
+        </Text>
+        <RangeBar value={Value} range={Range} color={statusColor} />
       </View>
-      
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={styles.labValue}>{Value || "--"}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: isNormal ? "#E8F5E9" : "#FFEBEE" }]}>
-          <Text style={[styles.statusBadgeText, { color: isNormal ? "#2E7D32" : "#C62828" }]}>
-            {Level || "PENDING"}
+
+      {/* Right: value + badge */}
+      <View style={styles.labRight}>
+        <Text style={[styles.labValue, { color: statusColor }]}>
+          {Value || "—"}
+        </Text>
+        <View
+          style={[
+            styles.labBadge,
+            { backgroundColor: statusTint, borderColor: statusBorder },
+          ]}
+        >
+          <View
+            style={[styles.labBadgeDot, { backgroundColor: statusColor }]}
+          />
+          <Text style={[styles.labBadgeText, { color: statusColor }]}>
+            {isNormal ? "Normal" : Level || "Pending"}
           </Text>
         </View>
       </View>
@@ -52,10 +151,20 @@ const LabCard = ({ title, Value, Level, Range, iconType, iconName }) => {
   );
 };
 
+// ── STAT CHIP ──
+const StatChip = ({ label, value, icon }) => (
+  <View style={styles.statChip}>
+    <Ionicons name={icon} size={14} color={C.textMuted} />
+    <Text style={styles.statChipLabel}>{label}</Text>
+    <Text style={styles.statChipValue}>{value}</Text>
+  </View>
+);
+
 export default function ECGScreen({ navigation }) {
   const [ecgData, setEcgData] = useState([]);
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sampleCount, setSampleCount] = useState(0);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -69,9 +178,14 @@ export default function ECGScreen({ navigation }) {
       const data = snap.val();
       if (data) {
         const keys = Object.keys(data);
-        const latestKey = keys.sort((a, b) => data[b].timestamp - data[a].timestamp)[0];
-        const latestEntry = data[latestKey];
-        if (latestEntry?.values) setEcgData(latestEntry.values.slice(0, 100));
+        const latestKey = keys.sort(
+          (a, b) => data[b].timestamp - data[a].timestamp
+        )[0];
+        const latest = data[latestKey];
+        if (latest?.values) {
+          setSampleCount(latest.values.length);
+          setEcgData(latest.values.slice(0, 120));
+        }
       }
     });
 
@@ -80,157 +194,437 @@ export default function ECGScreen({ navigation }) {
       setLoading(false);
     });
 
-    return () => { unsubECG(); unsubRes(); };
+    return () => {
+      unsubECG();
+      unsubRes();
+    };
   }, []);
 
   return (
-    <View style={styles.mainContainer}>
-      <LinearGradient colors={["#FDFDFD", "#F4F7F9"]} style={StyleSheet.absoluteFill} />
-      
-      {/* Header */}
+    <SafeAreaView style={styles.root} edges={["top"]}>
+      {/* ── HEADER ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color="#2C3E50" />
+        <TouchableOpacity
+          onPress={() => navigation?.goBack()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="chevron-back" size={22} color={C.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Diagnostics</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Diagnostics</Text>
+          <Text style={styles.headerSub}>ECG & Electrolytes</Text>
+        </View>
+        {/* Spacer mirror */}
+        <View style={styles.backBtn} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        {loading ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#B22222" />
-            <Text style={styles.loadingText}>Synchronizing...</Text>
-          </View>
-        ) : (
-          <>
-            {/* ECG Section */}
-            <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={styles.chartCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardMainTitle}>ECG Waveform</Text>
-                <View style={styles.liveIndicator}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>LATEST</Text>
+      {loading ? (
+        <View style={styles.loaderWrap}>
+          <ActivityIndicator size="large" color={C.crimson} />
+          <Text style={styles.loaderText}>Synchronizing data…</Text>
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* ── ECG WAVEFORM CARD ── */}
+          <MotiView
+            from={{ opacity: 0, translateY: 16 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 480 }}
+          >
+            <LinearGradient
+              colors={["#1a0505", "#3b0808", "#6B0F0F"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.ecgCard}
+            >
+              {/* Decorative rings */}
+              <View style={styles.ring1} />
+              <View style={styles.ring2} />
+
+              {/* Card header */}
+              <View style={styles.ecgHeader}>
+                <View>
+                  <Text style={styles.ecgLabel}>ECG Waveform</Text>
+                  <Text style={styles.ecgSub}>Latest recording</Text>
+                </View>
+                <View style={styles.latestBadge}>
+                  <View style={styles.latestDot} />
+                  <Text style={styles.latestText}>LATEST</Text>
                 </View>
               </View>
 
+              {/* Chart or empty */}
               {ecgData.length > 0 ? (
                 <LineChart
                   data={{ datasets: [{ data: ecgData }] }}
-                  width={screenWidth - 70}
-                  height={180}
-                  chartConfig={chartConfig}
+                  width={screenWidth - 72}
+                  height={130}
+                  chartConfig={ecgChartConfig}
                   bezier
                   withDots={false}
                   withInnerLines={false}
-                  style={styles.chart}
+                  withOuterLines={false}
+                  withXLabels={false}
+                  withYLabels={false}
+                  style={{ marginLeft: -18, marginTop: 6 }}
                 />
               ) : (
-                <View style={styles.emptyChart}><Text style={styles.noDataText}>Waiting for pulse...</Text></View>
+                <View style={styles.ecgEmpty}>
+                  <Ionicons
+                    name="pulse-outline"
+                    size={34}
+                    color="rgba(255,255,255,0.2)"
+                  />
+                  <Text style={styles.ecgEmptyText}>Waiting for pulse…</Text>
+                </View>
               )}
-            </MotiView>
 
-            {/* Electrolytes Section */}
-            <Text style={styles.gridTitle}>Electrolyte Balance</Text>
-            
-            <LabCard 
-              title="Potassium (K⁺)" 
-              iconType="MaterialCommunityIcons" 
-              iconName="flask-round-bottom" 
-              {...results?.Potassium} 
+              {/* Footer chips */}
+              <View style={styles.ecgFooter}>
+                <StatChip
+                  icon="analytics-outline"
+                  label="Samples"
+                  value={`${sampleCount}`}
+                />
+                <View style={styles.ecgFooterDiv} />
+                <StatChip
+                  icon="heart-outline"
+                  label="BPM"
+                  value={
+                    results?.BPM ? `${Math.round(results.BPM)}` : "—"
+                  }
+                />
+                <View style={styles.ecgFooterDiv} />
+                <StatChip
+                  icon="checkmark-circle-outline"
+                  label="Rhythm"
+                  value="Sinus"
+                />
+              </View>
+            </LinearGradient>
+          </MotiView>
+
+          {/* ── SECTION LABEL ── */}
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionLabel}>Electrolyte Balance</Text>
+            <View style={styles.sectionBadge}>
+              <Text style={styles.sectionBadgeText}>3 markers</Text>
+            </View>
+          </View>
+
+          {/* ── INFO STRIP ── */}
+          <View style={styles.infoStrip}>
+            <Ionicons
+              name="information-circle-outline"
+              size={14}
+              color={C.textMuted}
             />
-            
-            <LabCard 
-              title="Calcium (Ca²⁺)" 
-              iconType="FontAwesome5" 
-              iconName="bone" 
-              {...results?.Calcium} 
-            />
-            
-            <LabCard 
-              title="Magnesium (Mg²⁺)" 
-              iconType="Ionicons" 
-              iconName="leaf-outline" 
-              {...results?.Magnesium} 
-            />
-          </>
-        )}
-      </ScrollView>
-    </View>
+            <Text style={styles.infoText}>
+              Values compared to standard reference ranges
+            </Text>
+          </View>
+
+          {/* ── LAB CARDS ── */}
+          <LabCard
+            title="Potassium (K⁺)"
+            iconType="MaterialCommunityIcons"
+            iconName="flask-round-bottom"
+            delay={60}
+            {...results?.Potassium}
+          />
+          <LabCard
+            title="Calcium (Ca²⁺)"
+            iconType="FontAwesome5"
+            iconName="bone"
+            delay={120}
+            {...results?.Calcium}
+          />
+          <LabCard
+            title="Magnesium (Mg²⁺)"
+            iconType="Ionicons"
+            iconName="leaf-outline"
+            delay={180}
+            {...results?.Magnesium}
+          />
+        </ScrollView>
+      )}
+    </SafeAreaView>
   );
 }
 
-const chartConfig = {
-  backgroundGradientFrom: "#fff",
-  backgroundGradientTo: "#fff",
-  color: (opacity = 1) => `rgba(178, 34, 34, ${opacity})`,
-  strokeWidth: 2.5,
-  fillShadowGradientFrom: "#B22222",
-  fillShadowGradientTo: "#fff",
-  fillShadowGradientFromOpacity: 0.1,
+// ── CHART CONFIG ──
+const ecgChartConfig = {
+  backgroundGradientFrom: "transparent",
+  backgroundGradientFromOpacity: 0,
+  backgroundGradientTo: "transparent",
+  backgroundGradientToOpacity: 0,
+  color: (opacity = 1) => `rgba(255, 110, 110, ${opacity})`,
+  strokeWidth: 1.8,
   decimalPlaces: 0,
-  labelColor: () => `transparent`,
-  propsForBackgroundLines: { strokeWidth: 0 },
+  propsForBackgroundLines: { stroke: "transparent" },
 };
 
+// ── STYLES ──
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#FDFDFD" },
+  root: { flex: 1, backgroundColor: C.bg },
+
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 45,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    elevation: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: C.surface,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: '#2C3E50' },
-  backBtn: { padding: 5 },
-  scrollContent: { padding: 20 },
-  
-  chartCard: {
-    backgroundColor: "#fff",
-    borderRadius: 25,
-    padding: 15,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    marginBottom: 25,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
-  cardMainTitle: { fontSize: 16, fontWeight: '700', color: '#2C3E50' },
-  liveIndicator: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F1F1', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#B22222', marginRight: 6 },
-  liveText: { fontSize: 10, fontWeight: '900', color: '#B22222' },
-  chart: { marginLeft: -15, marginTop: 10 },
+  headerCenter: { alignItems: "center" },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: C.textPrimary,
+    letterSpacing: -0.3,
+  },
+  headerSub: {
+    fontSize: 11,
+    color: C.textMuted,
+    fontWeight: "500",
+    marginTop: 1,
+  },
 
-  gridTitle: { fontSize: 18, fontWeight: '800', color: '#2C3E50', marginBottom: 15, marginLeft: 5 },
+  // Loader
+  loaderWrap: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 14,
+  },
+  loaderText: {
+    fontSize: 14,
+    color: C.textMuted,
+    fontWeight: "500",
+  },
 
-  labCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+  // Scroll
+  scrollContent: {
+    padding: 18,
+    paddingBottom: 50,
+  },
+
+  // ECG card
+  ecgCard: {
+    borderRadius: 24,
+    padding: 20,
+    overflow: "hidden",
+    position: "relative",
+    marginBottom: 6,
+  },
+  ring1: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     borderWidth: 1,
-    borderColor: '#F0F3F5'
+    borderColor: "rgba(255,255,255,0.05)",
+    top: -80,
+    right: -50,
   },
-  labIconContainer: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#FDF2F2', justifyContent: 'center', alignItems: 'center' },
-  labTitle: { fontSize: 15, fontWeight: '700', color: '#2C3E50' },
-  labRange: { fontSize: 11, color: '#95A5A5', marginTop: 2 },
-  labValue: { fontSize: 20, fontWeight: '900', color: '#2C3E50' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 4 },
-  statusBadgeText: { fontSize: 10, fontWeight: '800' },
+  ring2: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.03)",
+    top: -130,
+    right: -100,
+  },
+  ecgHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
+  ecgLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: -0.2,
+  },
+  ecgSub: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.45)",
+    fontWeight: "500",
+    marginTop: 3,
+  },
+  latestBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 6,
+  },
+  latestDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#FF6B6B",
+  },
+  latestText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.8)",
+    letterSpacing: 0.8,
+  },
+  ecgEmpty: {
+    height: 110,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  ecgEmptyText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.3)",
+    fontWeight: "500",
+  },
+  ecgFooter: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingTop: 14,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+  ecgFooterDiv: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
 
-  loaderContainer: { marginTop: 120, alignItems: 'center' },
-  loadingText: { marginTop: 15, color: '#7F8C8D', fontWeight: '500' },
-  noDataText: { color: '#BDC3C7', padding: 40, textAlign: 'center' }
+  // Stat Chip (inside dark card)
+  statChip: { alignItems: "center", gap: 3, flex: 1 },
+  statChipLabel: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.4)",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  statChipValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.9)",
+  },
+
+  // Section header
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 26,
+    marginBottom: 6,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  sectionBadge: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  sectionBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: C.textMuted,
+  },
+
+  // Info strip
+  infoStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 14,
+  },
+  infoText: {
+    fontSize: 12,
+    color: C.textMuted,
+    fontWeight: "400",
+  },
+
+  // Lab Card
+  labCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 12,
+  },
+  labIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+    backgroundColor: "#FFF5F5",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  labMid: { flex: 1 },
+  labTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: C.textPrimary,
+    letterSpacing: -0.2,
+  },
+  labRange: {
+    fontSize: 11,
+    color: C.textMuted,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  labRight: { alignItems: "flex-end", gap: 6, flexShrink: 0 },
+  labValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  labBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  labBadgeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  labBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
 });

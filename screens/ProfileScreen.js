@@ -9,9 +9,14 @@ import {
   ScrollView,
   Image,
   Animated,
-  Easing,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { auth } from "../firebase";
+import * as ImagePicker from 'expo-image-picker';
+import { MaterialIcons, Ionicons, Feather } from "@expo/vector-icons"; // Feather add kiya camera icon ke liye
+import { LinearGradient } from "expo-linear-gradient";
+import { auth, db } from "../firebase"; // Ensure db is imported if needed
 import { signOut, onAuthStateChanged, updateProfile } from "firebase/auth";
 
 export default function ProfileScreen({ navigation }) {
@@ -19,6 +24,9 @@ export default function ProfileScreen({ navigation }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -32,208 +40,227 @@ export default function ProfileScreen({ navigation }) {
     return unsubscribe;
   }, []);
 
-  const toggleEdit = () => {
-    Animated.timing(fadeAnim, {
-      toValue: editing ? 1 : 0.8,
-      duration: 250,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => setEditing(!editing));
+  // 📸 Image Picker Function
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert("Permission Denied", "Gallery access is required to change profile picture.");
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setImageUploading(true);
+      try {
+        // Firebase update logic
+        await updateProfile(auth.currentUser, { photoURL: result.assets[0].uri });
+        setUser({ ...auth.currentUser, photoURL: result.assets[0].uri });
+        Alert.alert("Success", "Profile picture updated!");
+      } catch (error) {
+        Alert.alert("Error", "Failed to update image.");
+      } finally {
+        setImageUploading(false);
+      }
+    }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      Alert.alert("Logged Out", "You have been signed out successfully.");
-    } catch (err) {
-      console.log(err);
-    }
+  const toggleEdit = () => {
+    setEditing(!editing);
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.7, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
   };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a valid name.");
+      Alert.alert("Error", "Name cannot be empty.");
       return;
     }
-
+    setLoading(true);
     try {
       await updateProfile(auth.currentUser, { displayName: name });
-      Alert.alert("✅ Updated", "Profile name updated successfully!");
       setEditing(false);
+      Alert.alert("Success", "Profile updated successfully!");
     } catch (err) {
       Alert.alert("Error", err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { 
+        text: "Logout", 
+        style: "destructive", 
+        onPress: async () => {
+          try { await signOut(auth); } catch (e) { console.log(e); }
+        }
+      },
+    ]);
+  };
+
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      style={styles.mainContainer}
     >
-      {/* Avatar */}
-      <View style={styles.avatarContainer}>
-        <Image
-          source={
-            user?.photoURL
-              ? { uri: user.photoURL }
-              : require("../assets/profile.png")
-          }
-          style={styles.avatar}
-          resizeMode="cover"
-        />
-      </View>
-
-      {/* Title */}
-      <Text style={styles.heading}>Profile Settings</Text>
-
-      {/* Profile Info Card */}
-      <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-        {/* Full Name */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Full Name</Text>
-          {editing ? (
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-              placeholderTextColor="#888"
-            />
-          ) : (
-            <Text style={styles.value}>{name || "Not set"}</Text>
-          )}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+      >
+        
+        {/* Header Section */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={pickImage} activeOpacity={0.7}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={user?.photoURL ? { uri: user.photoURL } : require("../assets/profile.png")}
+                style={styles.avatar}
+              />
+              {/* 📸 Floating Camera Button */}
+              <View style={styles.cameraIconContainer}>
+                {imageUploading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Feather name="camera" size={16} color="#fff" />
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.userName}>{user?.displayName || "New User"}</Text>
+          <Text style={styles.userEmail}>{email}</Text>
         </View>
 
-        {/* Email */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Email Address</Text>
-          <Text style={[styles.value, { color: "#666" }]}>{email}</Text>
-        </View>
+        {/* Profile Card */}
+        <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Account Settings</Text>
+            <TouchableOpacity onPress={editing ? handleSave : toggleEdit}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#B22222" />
+              ) : (
+                <Text style={styles.editLink}>{editing ? "Save" : "Edit"}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
-        {/* Edit / Save Button */}
-        {editing ? (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.buttonText}>💾 Save Changes</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={styles.editButton} onPress={toggleEdit}>
-            <Text style={styles.buttonText}>✏️ Edit Profile</Text>
-          </TouchableOpacity>
-        )}
-      </Animated.View>
+          <View style={styles.divider} />
 
-      {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Full Name</Text>
+            <View style={[styles.inputWrapper, !editing && styles.inputDisabled]}>
+              <Ionicons name="person-outline" size={18} color="#666" style={styles.icon} />
+              <TextInput 
+                style={styles.input} 
+                value={name} 
+                onChangeText={setName} 
+                editable={editing} 
+                placeholder="Name"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email Address</Text>
+            <View style={[styles.inputWrapper, styles.inputDisabled]}>
+              <Ionicons name="mail-outline" size={18} color="#666" style={styles.icon} />
+              <TextInput 
+                style={styles.input} 
+                value={email} 
+                editable={false} 
+                color="#666" 
+              />
+              <MaterialIcons name="lock-outline" size={16} color="#999" />
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Sign Out Button */}
+        <TouchableOpacity 
+          style={styles.logoutWrapper} 
+          onPress={handleLogout} 
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={["#B22222", "#800000", "#4D0000"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradientButton}
+          >
+            <View style={styles.buttonContent}>
+              <MaterialIcons name="logout" size={20} color="#fff" />
+              <Text style={styles.buttonText}>Sign Out</Text>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <Text style={styles.versionText}>Version 1.0.4</Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    backgroundColor: "#F8F9FB",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    paddingVertical: 40, // slightly reduced top padding
-    paddingHorizontal: 25,
+  mainContainer: { flex: 1, backgroundColor: "#F8F9FA" },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
+  header: { alignItems: "center", marginTop: 50, marginBottom: 30 },
+  avatarWrapper: { 
+    elevation: 8, 
+    shadowColor: "#000", 
+    shadowOpacity: 0.2, 
+    shadowRadius: 10,
+    position: 'relative' // Camera icon ke liye zaroori hai
   },
-  avatarContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10, // closer to heading
-    marginTop: 60, // moves avatar lower (fixes white space)
-  },
-  avatar: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    borderWidth: 4,
-    borderColor: "#B22222",
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: "#fff" },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    backgroundColor: '#B22222',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
     elevation: 5,
   },
-  heading: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#B22222",
-    textAlign: "center",
-    marginBottom: 25,
-  },
-  card: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 25,
+  userName: { fontSize: 24, fontWeight: "800", color: "#1F2937", marginTop: 15 },
+  userEmail: { fontSize: 14, color: "#6B7280", marginTop: 2 },
+  card: { backgroundColor: "#fff", borderRadius: 20, padding: 24, elevation: 3 },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  cardTitle: { fontSize: 16, fontWeight: "700", color: "#374151" },
+  editLink: { color: "#B22222", fontWeight: "700", fontSize: 14 },
+  divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 24 },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 12, fontWeight: "600", color: "#9CA3AF", textTransform: "uppercase", marginBottom: 8, letterSpacing: 0.5 },
+  inputWrapper: { flexDirection: "row", alignItems: "center", backgroundColor: "#F9FAFB", borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB", paddingHorizontal: 16 },
+  inputDisabled: { backgroundColor: "#F3F4F6", borderColor: "#F3F4F6" },
+  icon: { marginRight: 12 },
+  input: { flex: 1, height: 50, fontSize: 16, color: "#111827" },
+  logoutWrapper: { marginTop: 30 },
+  gradientButton: {
+    paddingVertical: 16,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
-  fieldGroup: {
-    marginBottom: 18,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#444",
-    marginBottom: 5,
-  },
-  value: {
-    fontSize: 17,
-    color: "#111",
-    paddingVertical: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 10,
-    fontSize: 16,
-    backgroundColor: "#FAFAFA",
-    color: "#111",
-  },
-  editButton: {
-    backgroundColor: "#B22222",
-    paddingVertical: 14,
-    borderRadius: 40,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  saveButton: {
-    backgroundColor: "#2E8B57",
-    paddingVertical: 14,
-    borderRadius: 40,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  logoutButton: {
-    backgroundColor: "#fff",
-    borderWidth: 1.5,
-    borderColor: "#B22222",
-    paddingVertical: 14,
-    borderRadius: 40,
-    alignItems: "center",
-    width: "100%",
-    marginTop: 40,
-    marginBottom: 30, // reduced to balance bottom space
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  logoutText: {
-    color: "#B22222",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  buttonContent: { flexDirection: 'row', alignItems: 'center' },
+  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16, marginLeft: 10 },
+  versionText: { textAlign: "center", color: "#D1D5DB", fontSize: 12, marginTop: 30 },
 });
